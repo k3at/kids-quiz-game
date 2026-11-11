@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>لعبة الألغاز للأطفال</title>
+<style>
+  :root {
+    --bg1: #667eea;
+    --bg2: #764ba2;
+    --card: #ffffff;
+    --text: #2d3748;
+    --accent: #ff6b6b;
+    --accent2: #4ecdc4;
+    --gold: #ffd93d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: linear-gradient(135deg, var(--bg1), var(--bg2));
+    min-height: 100vh;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .app {
+    width: 100%;
+    max-width: 720px;
+    background: var(--card);
+    border-radius: 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    overflow: hidden;
+  }
+  header {
+    background: linear-gradient(135deg, var(--accent), #ff8e53);
+    color: #fff;
+    padding: 20px;
+    text-align: center;
+  }
+  header h1 { font-size: 26px; }
+  header p { font-size: 14px; opacity: .9; margin-top: 4px; }
+  .screen { padding: 24px; display: none; }
+  .screen.active { display: block; }
+  .players-setup h2 { margin-bottom: 12px; color: var(--bg2); }
+  .player-row {
+    display: flex; gap: 8px; margin-bottom: 8px; align-items: center;
+  }
+  .player-row input {
+    flex: 1; padding: 10px 12px; border: 2px solid #e2e8f0;
+    border-radius: 12px; font-size: 16px; font-family: inherit;
+  }
+  .player-row .badge {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: bold; flex-shrink: 0;
+  }
+  .btn {
+    background: linear-gradient(135deg, var(--accent2), #44a08d);
+    color: #fff; border: none; padding: 12px 20px; border-radius: 12px;
+    font-size: 16px; cursor: pointer; font-family: inherit; font-weight: bold;
+    transition: transform .1s, box-shadow .2s;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,.2); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .btn-secondary {
+    background: #e2e8f0; color: var(--text);
+  }
+  .btn-danger { background: var(--accent); }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .count-badge {
+    display: inline-block; background: var(--gold); color: #5a4a00;
+    padding: 4px 12px; border-radius: 20px; font-weight: bold; margin-bottom: 12px;
+  }
+  .question-card {
+    background: #f7fafc; border-radius: 16px; padding: 20px; margin-bottom: 16px;
+  }
+  .question-text { font-size: 20px; font-weight: bold; margin-bottom: 16px; line-height: 1.5; }
+  .answers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .answer-btn {
+    background: #fff; border: 2px solid #cbd5e0; border-radius: 12px;
+    padding: 12px; font-size: 16px; cursor: pointer; font-family: inherit;
+    transition: all .15s; text-align: center;
+  }
+  .answer-btn:hover { border-color: var(--accent2); background: #e6fffa; }
+  .answer-btn.correct { background: #c6f6d5; border-color: #38a169; }
+  .answer-btn.wrong { background: #fed7d7; border-color: #e53e3e; }
+  .answer-btn:disabled { cursor: default; }
+  .players-bar {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
+  }
+  .player-chip {
+    padding: 6px 12px; border-radius: 20px; background: #e2e8f0;
+    font-size: 14px; display: flex; align-items: center; gap: 6px;
+  }
+  .player-chip.active { background: var(--gold); font-weight: bold; }
+  .player-chip .score { font-weight: bold; color: var(--bg2); }
+  .progress { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-bottom: 16px; }
+  .progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--bg1)); transition: width .3s; }
+  .feedback { text-align: center; font-size: 18px; font-weight: bold; min-height: 28px; margin: 8px 0; }
+  .feedback.good { color: #38a169; }
+  .feedback.bad { color: #e53e3e; }
+  .leaderboard { list-style: none; }
+  .leaderboard li {
+    display: flex; justify-content: space-between; padding: 10px 14px;
+    background: #f7fafc; border-radius: 10px; margin-bottom: 8px; font-size: 18px;
+  }
+  .leaderboard li.winner { background: var(--gold); font-weight: bold; }
+  .status { text-align: center; color: #718096; font-size: 14px; margin-top: 8px; }
+  .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #e2e8f0; border-top-color: var(--bg1); border-radius: 50%; animation: spin 1s linear infinite; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (max-width: 480px) {
+    .answers { grid-template-columns: 1fr; }
+    header h1 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>🎮 لعبة الألغاز للأطفال</h1>
+    <p>اختبر معلوماتك مع الأصدقاء!</p>
+  </header>
+
+  <!-- Home / Setup -->
+  <section id="setup" class="screen active">
+    <h2>إعداد اللاعبين</h2>
+    <p class="status">الحد الأدنى 2 لاعبين، الحد الأقصى 8 لاعبين</p>
+    <div class="count-badge">عدد اللاعبين: <span id="playerCount">0</span></div>
+    <div id="playersList"></div>
+    <div class="actions">
+      <button class="btn" id="addPlayerBtn">➕ إضافة لاعب</button>
+      <button class="btn btn-secondary" id="removePlayerBtn">➖ حذف آخر</button>
+    </div>
+    <div class="actions">
+      <button class="btn" id="startBtn" disabled>▶️ بدء اللعب</button>
+    </div>
+    <p class="status" id="setupStatus"></p>
+  </section>
+
+  <!-- Game -->
+  <section id="game" class="screen">
+    <div class="players-bar" id="playersBar"></div>
+    <div class="progress"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+    <div class="question-card">
+      <div class="question-text" id="questionText">جاري تحميل الأسئلة...</div>
+      <div class="answers" id="answers"></div>
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <p class="status" id="gameStatus"></p>
+    <div class="actions" style="justify-content:center">
+      <button class="btn btn-secondary" id="refreshQBtn">🔄 تحديث الأسئلة</button>
+    </div>
+  </section>
+
+  <!-- Results -->
+  <section id="results" class="screen">
+    <h2>🏆 النتائج النهائية</h2>
+    <ul class="leaderboard" id="leaderboard"></ul>
+    <div class="actions" style="justify-content:center">
+      <button class="btn" id="playAgainBtn">🔁 لعب مرة أخرى</button>
+      <button class="btn btn-secondary" id="newGameBtn">🆕 لعبة جديدة</button>
+    </div>
+  </section>
+</div>
+
+<script>
+const MIN_PLAYERS = 2;
+const MAX_PLAYERS = 8;
+const QUESTIONS_PER_GAME = 10;
+
+const playerColors = ['#ff6b6b','#4ecdc4','#ffd93d','#a29bfe','#fd79a8','#6c5ce7','#00b894','#e17055'];
+
+let players = []; // {name, score}
+let questions = [];
+let qIndex = 0;
+let currentPlayer = 0;
+let answered = false;
+
+const $ = (id) => document.getElementById(id);
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(name).classList.add('active');
+}
+
+// ---------- Setup ----------
+function renderSetup() {
+  const list = $('playersList');
+  list.innerHTML = '';
+  players.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'player-row';
+    row.innerHTML = `
+      <div class="badge" style="background:${playerColors[i]}">${i+1}</div>
+      <input type="text" value="${escapeHtml(p.name)}" placeholder="اسم اللاعب ${i+1}" data-idx="${i}" />
+    `;
+    list.appendChild(row);
+  });
+  // bind inputs
+  list.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', (e) => {
+      players[+e.target.dataset.idx].name = e.target.value;
+      updateStartBtn();
+    });
+  });
+  $('playerCount').textContent = players.length;
+  updateStartBtn();
+}
+
+function updateStartBtn() {
+  const ok = players.length >= MIN_PLAYERS && players.length <= MAX_PLAYERS
+    && players.every(p => p.name.trim().length > 0);
+  $('startBtn').disabled = !ok;
+  if (players.length < MIN_PLAYERS) $('setupStatus').textContent = 'أضف على الأقل ' + MIN_PLAYERS + ' لاعبين';
+  else if (players.some(p => !p.name.trim())) $('setupStatus').textContent = 'أدخل أسماء جميع اللاعبين';
+  else $('setupStatus').textContent = 'جاهز للبدء!';
+}
+
+$('addPlayerBtn').addEventListener('click', () => {
+  if (players.length >= MAX_PLAYERS) return;
+  players.push({ name: '', score: 0 });
+  renderSetup();
+});
+$('removePlayerBtn').addEventListener('click', () => {
+  if (players.length <= 0) return;
+  players.pop();
+  renderSetup();
+});
+$('startBtn').addEventListener('click', () => {
+  players.forEach(p => p.score = 0);
+  startGame();
+});
+
+// init with 2 players
+players = [{name:'',score:0},{name:'',score:0}];
+renderSetup();
+
+// ---------- Questions ----------
+function decodeHtml(s) {
+  const t = document.createElement('textarea');
+  t.innerHTML = s;
+  return t.value;
+}
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+const KID_CATEGORIES = [27, 32, 17, 9, 10, 29]; // animals, cartoons, science, general, books, comics
+
+async function fetchQuestions() {
+  $('gameStatus').innerHTML = '<span class="spinner"></span> جاري تحميل الأسئلة...';
+  const all = [];
+  // fetch from a few random categories
+  const cats = shuffle([...KID_CATEGORIES]).slice(0, 3);
+  const perCat = Math.ceil(QUESTIONS_PER_GAME / cats.length);
+  const promises = cats.map(c =>
+    fetch(`https://opentdb.com/api.php?amount=${perCat}&category=${c}&difficulty=easy&type=multiple`)
+      .then(r => r.json())
+      .catch(() => ({response_code: 1, results: []}))
+  );
+  const results = await Promise.all(promises);
+  for (const r of results) {
+    if (r && r.results) {
+      for (const q of r.results) {
+        const answers = shuffle([q.correct_answer, ...q.incorrect_answers]).map(decodeHtml);
+        all.push({
+          question: decodeHtml(q.question),
+          correct: decodeHtml(q.correct_answer),
+          answers
+        });
+      }
+    }
+  }
+  // dedupe & trim
+  const seen = new Set();
+  const unique = [];
+  for (const q of all) {
+    if (!seen.has(q.question)) { seen.add(q.question); unique.push(q); }
+  }
+  questions = shuffle(unique).slice(0, QUESTIONS_PER_GAME);
+
+  // fallback if not enough
+  if (questions.length < 5) {
+    questions = fallbackQuestions().slice(0, QUESTIONS_PER_GAME);
+  }
+  $('gameStatus').textContent = `تم تحميل ${questions.length} سؤال`;
+}
+
+function fallbackQuestions() {
+  return [
+    {question:'ما هو لون السماء في يوم صافٍ؟', correct:'أزرق', answers:shuffle(['أزرق','أحمر','أخضر','أصفر'])},
+    {question:'كم عدد أرجل العنكبوت؟', correct:'8', answers:shuffle(['8','6','4','10'])},
+    {question:'ما هو أكبر كوكب في المجموعة الشمسية؟', correct:'المشتري', answers:shuffle(['المشتري','الأرض','المريخ','الزهرة'])},
+    {question:'أي حيوان يُعرف بملك الغابة؟', correct:'الأسد', answers:shuffle(['الأسد','النمر','الفيل','الزرافة'])},
+    {question:'كم عدد أيام الأسبوع؟', correct:'7', answers:shuffle(['7','5','6','8'])},
+    {question:'ما هو لون الموز الناضج؟', correct:'أصفر', answers:shuffle(['أصفر','أحمر','أخضر','بنفسجي'])},
+    {question:'أي كوكب نعيش عليه؟', correct:'الأرض', answers:shuffle(['الأرض','المريخ','القمر','الشمس'])},
+    {question:'كم عدد أصابع اليد؟', correct:'5', answers:shuffle(['5','4','6','10'])},
+    {question:'ما هي عاصمة فرنسا؟', correct:'باريس', answers:shuffle(['باريس','لندن','روما','مدريد'])},
+    {question:'أي حيوان يعطي الحليب؟', correct:'البقرة', answers:shuffle(['البقرة','الأسد','النسر','السمك'])},
+  ];
+}
+
+// ---------- Game flow ----------
+async function startGame() {
+  qIndex = 0;
+  currentPlayer = 0;
+  answered = false;
+  showScreen('game');
+  await fetchQuestions();
+  renderQuestion();
+}
+
+function renderPlayersBar() {
+  const bar = $('playersBar');
+  bar.innerHTML = '';
+  players.forEach((p, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'player-chip' + (i === currentPlayer ? ' active' : '');
+    chip.innerHTML = `<span>${escapeHtml(p.name)}</span> <span class="score">${p.score}</span>`;
+    bar.appendChild(chip);
+  });
+}
+
+function renderQuestion() {
+  answered = false;
+  $('feedback').textContent = '';
+  $('feedback').className = 'feedback';
+  renderPlayersBar();
+  const q = questions[qIndex];
+  $('questionText').textContent = q.question;
+  const answersEl = $('answers');
+  answersEl.innerHTML = '';
+  q.answers.forEach(ans => {
+    const btn = document.createElement('button');
+    btn.className = 'answer-btn';
+    btn.textContent = ans;
+    btn.addEventListener('click', () => handleAnswer(ans, btn));
+    answersEl.appendChild(btn);
+  });
+  const pct = (qIndex / questions.length) * 100;
+  $('progressBar').style.width = pct + '%';
+  $('gameStatus').textContent = `السؤال ${qIndex+1} من ${questions.length} — دور: ${players[currentPlayer].name}`;
+}
+
+function handleAnswer(ans, btn) {
+  if (answered) return;
+  answered = true;
+  const q = questions[qIndex];
+  const correct = ans === q.correct;
+  // disable all
+  document.querySelectorAll('.answer-btn').forEach(b => {
+    b.disabled = true;
+    if (b.textContent === q.correct) b.classList.add('correct');
+  });
+  if (correct) {
+    btn.classList.add('correct');
+    players[currentPlayer].score += 10;
+    $('feedback').textContent = '✅ أحسنت! +10 نقاط';
+    $('feedback').className = 'feedback good';
+  } else {
+    btn.classList.add('wrong');
+    $('feedback').textContent = '❌ خطأ! الإجابة: ' + q.correct;
+    $('feedback').className = 'feedback bad';
+  }
+  renderPlayersBar();
+  setTimeout(() => {
+    qIndex++;
+    if (qIndex >= questions.length) {
+      endGame();
+    } else {
+      currentPlayer = (currentPlayer + 1) % players.length;
+      renderQuestion();
+    }
+  }, 1400);
+}
+
+function endGame() {
+  showScreen('results');
+  const sorted = [...players].sort((a,b) => b.score - a.score);
+  const lb = $('leaderboard');
+  lb.innerHTML = '';
+  sorted.forEach((p, i) => {
+    const li = document.createElement('li');
+    if (i === 0) li.classList.add('winner');
+    li.innerHTML = `<span>${i+1}. ${escapeHtml(p.name)}</span><span>${p.score} نقطة</span>`;
+    lb.appendChild(li);
+  });
+}
+
+$('playAgainBtn').addEventListener('click', () => {
+  players.forEach(p => p.score = 0);
+  startGame();
+});
+$('newGameBtn').addEventListener('click', () => {
+  showScreen('setup');
+});
+$('refreshQBtn').addEventListener('click', async () => {
+  await fetchQuestions();
+  qIndex = 0;
+  currentPlayer = 0;
+  renderQuestion();
+});
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
