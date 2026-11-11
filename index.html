@@ -177,6 +177,7 @@ let questions = [];
 let qIndex = 0;
 let currentPlayer = 0;
 let answered = false;
+let attempts = new Set(); // player indices who attempted current question
 
 const $ = (id) => document.getElementById(id);
 
@@ -312,6 +313,7 @@ async function startGame() {
   qIndex = 0;
   currentPlayer = 0;
   answered = false;
+  attempts = new Set();
   showScreen('game');
   await fetchQuestions();
   renderQuestion();
@@ -354,31 +356,67 @@ function handleAnswer(ans, btn) {
   answered = true;
   const q = questions[qIndex];
   const correct = ans === q.correct;
+  attempts.add(currentPlayer);
   // disable all
-  document.querySelectorAll('.answer-btn').forEach(b => {
-    b.disabled = true;
-    if (b.textContent === q.correct) b.classList.add('correct');
-  });
+  document.querySelectorAll('.answer-btn').forEach(b => { b.disabled = true; });
   if (correct) {
     btn.classList.add('correct');
+    document.querySelectorAll('.answer-btn').forEach(b => {
+      if (b.textContent === q.correct) b.classList.add('correct');
+    });
     players[currentPlayer].score += 10;
     $('feedback').textContent = '✅ أحسنت! +10 نقاط';
     $('feedback').className = 'feedback good';
+    renderPlayersBar();
+    setTimeout(() => {
+      qIndex++;
+      attempts = new Set();
+      if (qIndex >= questions.length) {
+        endGame();
+      } else {
+        currentPlayer = (currentPlayer + 1) % players.length;
+        renderQuestion();
+      }
+    }, 1400);
   } else {
     btn.classList.add('wrong');
+    // reveal correct
+    document.querySelectorAll('.answer-btn').forEach(b => {
+      if (b.textContent === q.correct) b.classList.add('correct');
+    });
     $('feedback').textContent = '❌ خطأ! الإجابة: ' + q.correct;
     $('feedback').className = 'feedback bad';
+    renderPlayersBar();
+    setTimeout(() => {
+      // if all players attempted, move to next question
+      if (attempts.size >= players.length) {
+        $('feedback').textContent = '➡️ لا أحد أجاب بشكل صحيح. الإجابة: ' + q.correct;
+        setTimeout(() => {
+          qIndex++;
+          attempts = new Set();
+          if (qIndex >= questions.length) {
+            endGame();
+          } else {
+            currentPlayer = (currentPlayer + 1) % players.length;
+            renderQuestion();
+          }
+        }, 1200);
+      } else {
+        // pass question to next player
+        currentPlayer = (currentPlayer + 1) % players.length;
+        // skip players who already attempted? find next unattempted
+        let guard = 0;
+        while (attempts.has(currentPlayer) && guard < players.length) {
+          currentPlayer = (currentPlayer + 1) % players.length;
+          guard++;
+        }
+        $('feedback').textContent = '➡️ انتقل السؤال إلى: ' + players[currentPlayer].name;
+        setTimeout(() => {
+          renderQuestion();
+        }, 1200);
+      }
+    }, 1400);
   }
-  renderPlayersBar();
-  setTimeout(() => {
-    qIndex++;
-    if (qIndex >= questions.length) {
-      endGame();
-    } else {
-      currentPlayer = (currentPlayer + 1) % players.length;
-      renderQuestion();
-    }
-  }, 1400);
 }
 
 function endGame() {
@@ -405,6 +443,7 @@ $('refreshQBtn').addEventListener('click', async () => {
   await fetchQuestions();
   qIndex = 0;
   currentPlayer = 0;
+  attempts = new Set();
   renderQuestion();
 });
 
